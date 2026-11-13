@@ -190,12 +190,6 @@ FLASHINFER_LAYERNORM = all_of(
 )
 
 TRITON_NORM = all_of(NVIDIA_TRITON, dtype.input.in_(TRITON_FLOATS))
-# The Triton layernorm also runs under ROCm Triton.
-GPU_TRITON_LAYERNORM = all_of(
-    lib.has("phyai_kernel"),
-    device.vendor.in_({"nvidia", "amd"}),
-    dtype.input.in_(TRITON_FLOATS),
-)
 RMSNORM_LAYOUT = any_of(attrs.rank.is_none(), attrs.rank.in_({2, 3}))
 
 
@@ -545,7 +539,7 @@ def register(catalog: Catalog) -> None:
                 kernel_id="phyai_kernel.layernorm",
                 op="layernorm",
                 priority=Priority.OPTIMIZED,
-                when=GPU_TRITON_LAYERNORM,
+                when=TRITON_NORM,
                 prepare=_triton_layernorm,
                 params={"weight": any_float(), "bias": any_float()},
             ),
