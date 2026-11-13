@@ -17,6 +17,8 @@ logger = get_logger(__name__)
 
 HALF_FLOATS = frozenset({"bf16", "fp16"})
 NVIDIA_FLASHINFER = lib.has("flashinfer") & (device.vendor == "nvidia")
+# FlashInfer+ROCm ports prefill attention but not the GDN kernels.
+GPU_FLASHINFER = lib.has("flashinfer") & device.vendor.in_({"nvidia", "amd"})
 
 
 ATTENTION = OpSpec(
@@ -69,7 +71,7 @@ ATTENTION_GDN = OpSpec(
 # causal layer has no single position renumbering — those combinations stay
 # on the dense (sdpa/eager) path by capability, not by a runtime raise.
 FLASHINFER_ATTENTION = all_of(
-    NVIDIA_FLASHINFER,
+    GPU_FLASHINFER,
     shape.head_dim.in_({64, 128, 256}),
     dtype.input.in_(HALF_FLOATS),
     dtype.key.in_(HALF_FLOATS),
@@ -89,7 +91,7 @@ FLASHINFER_ATTENTION = all_of(
 # unsupported head_dim from selecting fine and dying inside ``wrapper.plan`` —
 # a raise cannot drive a fallback.
 FLASHINFER_PAGED = all_of(
-    NVIDIA_FLASHINFER,
+    GPU_FLASHINFER,
     shape.head_dim.in_({64, 128, 256}),
     dtype.input.in_(HALF_FLOATS),
 )

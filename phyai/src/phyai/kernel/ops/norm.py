@@ -16,6 +16,8 @@ from phyai.kernel.predicate import all_of, any_of, implies
 
 NVIDIA = device.vendor == "nvidia"
 NVIDIA_FLASHINFER = lib.has("flashinfer") & NVIDIA
+# FlashInfer+ROCm binds the rmsnorm family but not layernorm.
+GPU_FLASHINFER = lib.has("flashinfer") & device.vendor.in_({"nvidia", "amd"})
 NVIDIA_TRITON = lib.has("phyai_kernel") & NVIDIA
 
 #: The dtypes the Triton norm entry points accept.
@@ -173,7 +175,7 @@ RMSNORM_SILU_MUL = OpSpec(
 
 # FlashInfer RMSNorm requires bf16 input and weight tensors.
 FLASHINFER_RMSNORM = all_of(
-    NVIDIA_FLASHINFER, dtype.input == "bf16", dtype.weight == "bf16"
+    GPU_FLASHINFER, dtype.input == "bf16", dtype.weight == "bf16"
 )
 
 # The fused form also requires a bf16 residual tensor.

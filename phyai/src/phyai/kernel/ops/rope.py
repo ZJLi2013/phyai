@@ -21,7 +21,7 @@ ROPE = OpSpec(
 
 FLASHINFER_ROPE = all_of(
     lib.has("flashinfer"),
-    device.vendor == "nvidia",
+    device.vendor.in_({"nvidia", "amd"}),
     dtype.input.in_({"bf16", "fp16"}),
     shape.rotary_dim == shape.head_dim,
 )

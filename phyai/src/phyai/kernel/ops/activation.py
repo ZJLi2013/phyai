@@ -24,7 +24,7 @@ ACTIVATION = OpSpec(
 # FlashInfer supports only gated forms with half-precision inputs.
 FLASHINFER_GATED = all_of(
     lib.has("flashinfer"),
-    device.vendor == "nvidia",
+    device.vendor.in_({"nvidia", "amd"}),
     attrs.gated,
     dtype.input.in_({"bf16", "fp16"}),
 )
