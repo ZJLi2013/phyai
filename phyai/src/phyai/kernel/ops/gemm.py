@@ -101,14 +101,17 @@ def _aiter_bf16(facts, params):
     from aiter import tuned_gemm
 
     # aiter merges every CSV listed in this variable; shapes missing from all
-    # of them fall back to torch inside tgemm.
+    # of them fall back to torch inside tgemm. The merged file and per-shape
+    # lookups are memoized on first use, so they are cleared after extending it.
     tuned = str(Path(__file__).with_name("aiter_bf16_tuned_gemm.csv"))
     configured = os.environ.get(
         "AITER_CONFIG_GEMM_BF16", aiter_core.AITER_CONFIG_GEMM_BF16
     )
     if tuned not in configured.split(os.pathsep):
         os.environ["AITER_CONFIG_GEMM_BF16"] = os.pathsep.join((configured, tuned))
+        type(aiter_core.AITER_CONFIGS).get_config_file.cache_clear()
         tuned_gemm.get_GEMM_A16W16_config_.cache_clear()
+        tuned_gemm.get_GEMM_A16W16_config.cache_clear()
 
     def gemm(layer, x, bias):
         if x.numel() == 0:
