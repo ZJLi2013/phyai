@@ -72,6 +72,27 @@ def test_forward_matches_torch_reference_bf16(backend, with_bias):
     torch.testing.assert_close(m(x), ref, atol=2e-2, rtol=2e-2)
 
 
+@pytest.mark.parametrize("device", ["nvidia:SM90", "amd:gfx942"])
+def test_triton_layernorm_is_eligible_on_both_vendors(device):
+    pytest.importorskip("phyai_kernel")
+    from phyai.kernel.bootstrap import get_kernel_selector
+    from phyai.kernel.types import KernelQuery
+
+    selector = get_kernel_selector()
+    spec = selector.catalog.op("layernorm")
+    query = selector.normalize(
+        KernelQuery.build(
+            "layernorm",
+            device=device,
+            dtype={"input": "bf16", "output": "bf16"},
+            shape={"hidden": 1152},
+            attrs={"bias": True},
+        )
+    )
+    eligible, _ = selector.assess(spec, selector.facts_for(query, spec), query.mode)
+    assert "phyai_kernel.layernorm" in {item.kernel_id for item in eligible}
+
+
 def test_phyai_kernel_higher_rank_input():
     """4-D input flattens to (N, D) and reshapes back."""
     torch.manual_seed(2)
