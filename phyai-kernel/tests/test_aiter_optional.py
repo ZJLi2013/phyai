@@ -15,11 +15,12 @@ def _run(code: str) -> None:
 def test_modules_import_without_aiter():
     _run(
         "import os, sys\n"
+        "os.environ.pop('AITER_CONFIG_GEMM_BF16', None)\n"
         "sys.modules['aiter'] = None\n"
         "import phyai_kernel\n"
         f"for name in {MODULES!r}:\n"
         "    __import__(f'phyai_kernel.aiter.{name}')\n"
-        "assert 'aiter_bf16_tuned_gemm' not in os.environ.get('AITER_CONFIG_GEMM_BF16', '')\n"
+        "assert 'AITER_CONFIG_GEMM_BF16' not in os.environ\n"
     )
 
 
