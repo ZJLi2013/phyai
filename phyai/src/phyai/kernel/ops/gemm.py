@@ -94,29 +94,12 @@ def _flashinfer_nvfp4(facts, params):
 
 
 def _aiter_bf16(facts, params):
-    import os
-    from pathlib import Path
+    from phyai_kernel.aiter.gemm import ensure_tuned_config, mm
 
-    import aiter.jit.core as aiter_core
-    from aiter import tuned_gemm
-
-    # aiter merges every CSV listed in this variable; shapes missing from all
-    # of them fall back to torch inside tgemm. The merged file and per-shape
-    # lookups are memoized on first use, so they are cleared after extending it.
-    tuned = str(Path(__file__).with_name("aiter_bf16_tuned_gemm.csv"))
-    configured = os.environ.get(
-        "AITER_CONFIG_GEMM_BF16", aiter_core.AITER_CONFIG_GEMM_BF16
-    )
-    if tuned not in configured.split(os.pathsep):
-        os.environ["AITER_CONFIG_GEMM_BF16"] = os.pathsep.join((configured, tuned))
-        type(aiter_core.AITER_CONFIGS).get_config_file.cache_clear()
-        tuned_gemm.get_GEMM_A16W16_config_.cache_clear()
-        tuned_gemm.get_GEMM_A16W16_config.cache_clear()
+    ensure_tuned_config()
 
     def gemm(layer, x, bias):
-        if x.numel() == 0:
-            return x.new_empty((*x.shape[:-1], layer.weight.shape[0]))
-        return tuned_gemm.tgemm.mm(x, layer.weight, bias)
+        return mm(x, layer.weight, bias)
 
     return gemm
 
@@ -305,8 +288,9 @@ def register(catalog: Catalog) -> None:
             op="gemm",
             priority=Priority.OPTIMIZED,
             when=all_of(
-                lib.has("aiter"),
                 device.vendor == "amd",
+                lib.has("phyai_kernel"),
+                lib.has("aiter"),
                 quant.format == "bf16",
                 dtype.input == "bf16",
                 dtype.weight == "bf16",

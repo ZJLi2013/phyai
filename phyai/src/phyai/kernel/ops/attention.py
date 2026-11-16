@@ -97,8 +97,9 @@ FLASHINFER_PAGED = all_of(
 # aiter's CK batch prefill reads the same paged layout (indptr, page indices,
 # last-page lengths) as FlashInfer.
 AITER_PAGED = all_of(
-    lib.has("aiter"),
     device.vendor == "amd",
+    lib.has("phyai_kernel"),
+    lib.has("aiter"),
     shape.head_dim.in_({64, 128, 256}),
     dtype.input.in_(HALF_FLOATS),
 )

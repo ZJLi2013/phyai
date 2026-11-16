@@ -36,13 +36,15 @@ class AiterPagedBackend(PagedAttentionBackend):
 
     def __init__(self, runner: "ModelRunner | None" = None) -> None:
         del runner
-        try:
-            from aiter import mha_batch_prefill_func
-        except ImportError as e:
+        from phyai.kernel.library import library_available
+
+        if not library_available("aiter"):
             raise ImportError(
                 "backend='aiter' (paged) but aiter is not installed; install amd-aiter."
-            ) from e
-        self._prefill = mha_batch_prefill_func
+            )
+        from phyai_kernel.aiter.attention import batch_prefill_paged
+
+        self._prefill = batch_prefill_paged
         self._cu_q_buf: torch.Tensor | None = None
         self._kv_indptr_buf: torch.Tensor | None = None
         self._kv_indices_buf: torch.Tensor | None = None
@@ -154,11 +156,11 @@ class AiterPagedBackend(PagedAttentionBackend):
             plan.cu_seqlens_q,
             plan.paged_kv_indptr,
             plan.paged_kv_indices,
+            plan.paged_kv_last_page_len,
             self._max_seqlen_q,
             self._max_seqlen_kv,
             softmax_scale=layer.scale,
             causal=layer.causal,
-            kv_last_page_lens=plan.paged_kv_last_page_len,
         )
 
 

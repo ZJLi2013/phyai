@@ -46,12 +46,23 @@ QUERIES = {
 }
 
 
+def _libraries(aiter: bool):
+    def facts(names):
+        return {
+            **library_facts(names),
+            "lib.aiter": aiter and "aiter" in names,
+            "lib.phyai_kernel": "phyai_kernel" in names,
+        }
+
+    return facts
+
+
 @pytest.mark.parametrize("kernel_id", QUERIES)
 def test_aiter_rows_are_selected_on_amd_only(kernel_id, monkeypatch):
     monkeypatch.setattr(
         selector_module,
         "library_facts",
-        lambda names: {**library_facts(names), "lib.aiter": "aiter" in names},
+        _libraries(aiter=True),
     )
     amd = Selector(build_catalog(), device="amd:gfx942").explain(QUERIES[kernel_id])
     nvidia = Selector(build_catalog(), device="nvidia:sm90").explain(QUERIES[kernel_id])
@@ -59,11 +70,18 @@ def test_aiter_rows_are_selected_on_amd_only(kernel_id, monkeypatch):
     assert not nvidia.selected.startswith("aiter.")
 
 
+@pytest.mark.parametrize("kernel_id", QUERIES)
+def test_amd_falls_back_without_aiter(kernel_id, monkeypatch):
+    monkeypatch.setattr(selector_module, "library_facts", _libraries(aiter=False))
+    amd = Selector(build_catalog(), device="amd:gfx942").explain(QUERIES[kernel_id])
+    assert amd.selected and not amd.selected.startswith("aiter.")
+
+
 def test_aiter_rmsnorm_rejects_fp32_weight(monkeypatch):
     monkeypatch.setattr(
         selector_module,
         "library_facts",
-        lambda names: {**library_facts(names), "lib.aiter": "aiter" in names},
+        _libraries(aiter=True),
     )
     query = KernelQuery.build(
         "rmsnorm",

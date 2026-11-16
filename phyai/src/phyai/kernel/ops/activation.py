@@ -42,19 +42,12 @@ def _flashinfer(function_name: str):
 
 
 def _aiter(function_name: str):
-    """Prepare one named aiter gated activation, which writes into ``out``."""
+    """Prepare one named aiter gated activation."""
 
     def prepare(facts, params):
-        import aiter
+        from phyai_kernel.aiter import activation as module
 
-        function = getattr(aiter, function_name)
-
-        def execute(x):
-            out = x.new_empty((*x.shape[:-1], x.shape[-1] // 2))
-            function(out, x)
-            return out
-
-        return execute
+        return getattr(module, function_name)
 
     return prepare
 
@@ -152,8 +145,9 @@ def register(catalog: Catalog) -> None:
                 op="activation",
                 priority=Priority.OPTIMIZED + 2,
                 when=all_of(
-                    lib.has("aiter"),
                     device.vendor == "amd",
+                    lib.has("phyai_kernel"),
+                    lib.has("aiter"),
                     attrs.gated,
                     dtype.input.in_({"bf16", "fp16"}),
                     attrs.activation == activation,

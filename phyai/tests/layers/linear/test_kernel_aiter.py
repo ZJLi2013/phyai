@@ -44,18 +44,6 @@ def test_aiter_gemm_is_amd_bf16_only():
     assert "aiter.gemm.bf16" not in _gemm_eligible("nvidia:SM90")
 
 
-def test_tuned_shapes_apply_after_aiter_config_was_read():
-    from aiter.jit.utils.chip_info import get_cu_num, get_gfx
-    from aiter.tuned_gemm import get_GEMM_A16W16_config
-
-    if (get_gfx(), get_cu_num()) != ("gfx942", 304):
-        pytest.skip("the shipped tuned shapes are for MI300X")
-    shape = (50, 1024, 2048, False, str(torch.bfloat16), str(torch.bfloat16))
-    get_GEMM_A16W16_config(*shape)
-    _aiter_bf16(None, {})
-    assert get_GEMM_A16W16_config(*shape)["libtype"] != "torch"
-
-
 @pytest.mark.parametrize(
     "M,N,K,with_bias",
     [

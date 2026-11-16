@@ -17,7 +17,7 @@ from phyai.kernel.predicate import all_of, any_of, implies
 NVIDIA = device.vendor == "nvidia"
 NVIDIA_FLASHINFER = lib.has("flashinfer") & NVIDIA
 NVIDIA_TRITON = lib.has("phyai_kernel") & NVIDIA
-AMD_AITER = lib.has("aiter") & (device.vendor == "amd")
+AMD_AITER = all_of(device.vendor == "amd", lib.has("phyai_kernel"), lib.has("aiter"))
 
 #: The dtypes the Triton norm entry points accept.
 TRITON_FLOATS = frozenset({"bf16", "fp16", "fp32"})
@@ -237,18 +237,9 @@ def _flashinfer_rmsnorm_add(facts, params):
 
 
 def _aiter_rmsnorm(facts, params):
-    from aiter import rms_norm
+    from phyai_kernel.aiter.norm import gemma_rmsnorm, rmsnorm
 
-    if not _gemma(facts):
-        return _rmsnorm_flattened(rms_norm)
-
-    # aiter has no Gemma variant, so it is fed ``1 + weight``. Derive it on
-    # every call: a cached copy first made during graph capture is filled only
-    # when that one graph replays.
-    def gemma_rms_norm(x, weight, eps):
-        return rms_norm(x, weight + 1, eps)
-
-    return _rmsnorm_flattened(gemma_rms_norm)
+    return _rmsnorm_flattened(gemma_rmsnorm if _gemma(facts) else rmsnorm)
 
 
 def _triton_rmsnorm(facts, params):
